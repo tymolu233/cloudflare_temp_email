@@ -13,21 +13,18 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import os, re
+          import os
           text = os.environ.get("WRANGLER_TOML_CONTENT", "")
-          allow = re.compile(
-              r'^(name|main|compatibility_date|compatibility_flags|keep_vars|'
-              r'database_name|database_id|binding|directory|run_worker_first|'
-              r'pattern|custom_domain|crons)\b|^\s*\[\[|^\[assets\]|^\[vars\]|^\[triggers\]'
-          )
+          safe_full = {
+              "name", "main", "compatibility_date", "keep_vars",
+              "database_name", "database_id", "binding", "directory",
+              "run_worker_first", "pattern", "custom_domain",
+          }
           print("lines", len(text.splitlines()))
-          for line in text.splitlines():
-              stripped = line.strip()
-              if not allow.search(stripped):
-                  continue
-              if re.search(r'PASSWORD|JWT|SECRET|DOMAINS', stripped, re.I):
-                  print(stripped.split("=", 1)[0].strip(), "= <redacted>")
-                  continue
-              print(stripped)
-          print("has_anonymous", "DISABLE_ANONYMOUS_USER_CREATE_EMAIL" in text)
+          for i, line in enumerate(text.splitlines(), 1):
+              key = line.split("=", 1)[0].strip()
+              if key in safe_full or key.startswith("[") or key.startswith("compatibility_flags"):
+                  print(line.rstrip())
+              else:
+                  print(f"{i}|{key[:80]}")
           PY
