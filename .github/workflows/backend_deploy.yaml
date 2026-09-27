@@ -1,13 +1,16 @@
 name: Deploy Backend
 
 on:
-  workflow_run:
-    workflows: [Upstream Sync]
-    types: [completed]
   push:
+    branches:
+      - main
     tags:
       - "*"
   workflow_dispatch:
+
+concurrency:
+  group: deploy-backend-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   deploy:
