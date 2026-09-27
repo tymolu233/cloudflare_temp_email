@@ -13,21 +13,21 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import os
+          import os, re
           text = os.environ.get("WRANGLER_TOML_CONTENT", "")
-          keys = (
-              "name =", "main =", "compatibility_date", "compatibility_flags",
-              "keep_vars", "[[d1_databases]]", "[assets]", "binding =",
-              "directory =", "run_worker_first", "database_name", "database_id",
-              "[[routes]]", "pattern =", "custom_domain", "[triggers]", "crons =",
+          allow = re.compile(
+              r'^(name|main|compatibility_date|compatibility_flags|keep_vars|'
+              r'database_name|database_id|binding|directory|run_worker_first|'
+              r'pattern|custom_domain|crons)\b|^\s*\[\[|^\[assets\]|^\[vars\]|^\[triggers\]'
           )
           print("lines", len(text.splitlines()))
           for line in text.splitlines():
               stripped = line.strip()
-              upper = stripped.upper()
-              if any(word in upper for word in ("PASSWORD", "JWT", "SECRET", "DOMAINS")):
+              if not allow.search(stripped):
                   continue
-              if any(stripped.startswith(key) or stripped == key for key in keys):
-                  print(stripped)
+              if re.search(r'PASSWORD|JWT|SECRET|DOMAINS', stripped, re.I):
+                  print(stripped.split("=", 1)[0].strip(), "= <redacted>")
+                  continue
+              print(stripped)
           print("has_anonymous", "DISABLE_ANONYMOUS_USER_CREATE_EMAIL" in text)
           PY
