@@ -1,0 +1,33 @@
+name: List CF targets
+
+on:
+  workflow_dispatch:
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    steps:
+      - name: List Pages projects and worker routes
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          auth=( -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H "Content-Type: application/json" )
+          base="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}"
+
+          echo "=== pages projects ==="
+          curl -sS "${auth[@]}" "${base}/pages/projects" \
+            | jq '{success, errors, projects: [.result[]? | {name, subdomain, domains}]}'
+
+          echo "=== workers ==="
+          curl -sS "${auth[@]}" "${base}/workers/scripts" \
+            | jq '{success, errors, scripts: [.result[]? | {id, modified_on}]}'
+
+          echo "=== worker subdomain ==="
+          curl -sS "${auth[@]}" "${base}/workers/scripts/cloudflare_temp_email/subdomain" \
+            | jq '{success, errors, result: (.result | {enabled, previews_enabled})}'
+
+          echo "=== workers domains ==="
+          curl -sS "${auth[@]}" "${base}/workers/domains" \
+            | jq '{success, errors, domains: [.result[]? | {hostname, service, environment}]}'
