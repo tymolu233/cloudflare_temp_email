@@ -1,0 +1,33 @@
+name: List CF targets
+
+on:
+  workflow_dispatch:
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    steps:
+      - name: List non-secret worker metadata
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          auth=( -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H "Content-Type: application/json" )
+          base="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}"
+          echo "=== metadata ==="
+          curl -sS "${auth[@]}" "${base}/workers/scripts/cloudflare_temp_email/settings" \
+            | jq '{
+                success,
+                errors,
+                compatibility_date: .result.compatibility_date,
+                compatibility_flags: .result.compatibility_flags,
+                bindings: [
+                  .result.bindings[]?
+                  | {type, name}
+                  + (if .type == "d1" then {id} else {} end)
+                ]
+              }'
+          echo "=== d1 ==="
+          curl -sS "${auth[@]}" "${base}/d1/database" \
+            | jq '{success, errors, databases: [.result[]? | {name, uuid}]}'
