@@ -1,6 +1,11 @@
 name: Deploy Backend
 
 on:
+  push:
+    branches:
+      - main
+    tags:
+      - "*"
   workflow_dispatch:
 
 concurrency:
