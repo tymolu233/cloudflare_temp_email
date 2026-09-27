@@ -22,11 +22,8 @@ jobs:
                 errors,
                 compatibility_date: .result.compatibility_date,
                 compatibility_flags: .result.compatibility_flags,
-                bindings: [
-                  .result.bindings[]?
-                  | {type, name}
-                  + (if .type == "d1" then {id} else {} end)
-                ]
+                d1: [.result.bindings[]? | select(.type=="d1")],
+                assets: [.result.bindings[]? | select(.type=="assets") | keys]
               }'
           echo "=== d1 ==="
           curl -sS "${auth[@]}" "${base}/d1/database" \
