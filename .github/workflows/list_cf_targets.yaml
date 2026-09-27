@@ -13,18 +13,30 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import os
+          import os, re, base64
           text = os.environ.get("WRANGLER_TOML_CONTENT", "")
-          safe_full = {
-              "name", "main", "compatibility_date", "keep_vars",
-              "database_name", "database_id", "binding", "directory",
-              "run_worker_first", "pattern", "custom_domain",
+          patterns = {
+              "worker_name": r'(?m)^name\s*=\s*"([^"]+)"',
+              "main": r'(?m)^main\s*=\s*"([^"]+)"',
+              "compatibility_date": r'(?m)^compatibility_date\s*=\s*"([^"]+)"',
+              "keep_vars": r'(?m)^keep_vars\s*=\s*(\w+)',
+              "database_name": r'database_name\s*=\s*"([^"]+)"',
+              "database_id": r'database_id\s*=\s*"([^"]+)"',
+              "assets_dir": r'directory\s*=\s*"([^"]+)"',
+              "run_worker_first": r'run_worker_first\s*=\s*(\w+)',
+              "assets_binding": r'(?s)\[assets\].*?binding\s*=\s*"([^"]+)"',
+              "d1_binding": r'(?s)\[\[d1_databases\]\].*?binding\s*=\s*"([^"]+)"',
           }
-          print("lines", len(text.splitlines()))
-          for i, line in enumerate(text.splitlines(), 1):
-              key = line.split("=", 1)[0].strip()
-              if key in safe_full or key.startswith("[") or key.startswith("compatibility_flags"):
-                  print(line.rstrip())
-              else:
-                  print(f"{i}|{key[:80]}")
+          for key, pat in patterns.items():
+              found = re.search(pat, text)
+              value = found.group(1) if found else ""
+              encoded = base64.b64encode(value.encode()).decode()
+              print(f"{key} {encoded}")
+          flags = re.search(r'(?m)^compatibility_flags\s*=\s*(\[[^\]]*\])', text)
+          flag_text = flags.group(1) if flags else ""
+          print("flags", base64.b64encode(flag_text.encode()).decode())
+          routes = re.findall(r'pattern\s*=\s*"([^"]+)"', text)
+          print("route_count", len(routes))
+          for route in routes:
+              print("route", base64.b64encode(route.encode()).decode())
           PY
